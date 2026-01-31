@@ -1,60 +1,49 @@
-name: Tourism Project Pipeline
+name: Tourism ML Pipeline
+
 on:
   push:
     branches:
-      - main  # Automatically triggers on push to the main branch
+      - main   # Run workflow whenever code is pushed to main branch
 
 jobs:
-
-  register-dataset:
+  build-train-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Install Dependencies
-        run: <add_code_here>
-      - name: Upload Dataset to Hugging Face Hub
+      # 1. Checkout repo
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      # 3. Install dependencies
+      - name: Install requirements
+        run: pip install -r requirements.txt
+
+      # 4. Data preparation
+      - name: Run data preparation
+        run: python scripts/data_prep.py
+
+      # 5. Train model
+      - name: Train model
+        run: python scripts/train_model.py
+
+      # 6. Evaluate model
+      - name: Evaluate model
+        run: python scripts/evaluate.py
+
+      # 7. Upload model to Hugging Face Hub
+      - name: Upload model
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: <add_code_here>
+        run: python scripts/upload_model.py
 
-  data-prep:
-    needs: register-dataset
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Dependencies
-        run: <add_code_here>
-      - name: Run Data Preparation
+      # 8. Deploy Streamlit app to Hugging Face Space
+      - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: <add_code_here>
-
-
-  model-traning:
-    needs: data-prep
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Dependencies
-        run: <add_code_here>
-      - name: Start MLflow Server
-        run: |
-          nohup mlflow ui --host 0.0.0.0 --port 5000 &  # Run MLflow UI in the background
-          sleep 5  # Wait for a moment to let the server starts
-      - name: Model Building
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: <add_code_here>
-
-
-  deploy-hosting:
-    runs-on: ubuntu-latest
-    needs: [model-traning,data-prep,register-dataset]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Dependencies
-        run: <add_code_here>
-      - name: Push files to Frontend Hugging Face Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: <add_code_here>
+        run: python scripts/deploy_space.py
